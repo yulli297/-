@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>한글날 초성 퀴즈</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#4a3020;font-family:'Gaegu','Nanum Pen Script',cursive;color:#f4f1e8;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+#frame{position:absolute;inset:0;display:flex;flex-direction:column;background:#6b4423;padding:calc(2vmin + env(safe-area-inset-top)) calc(2vmin + env(safe-area-inset-right)) 0 calc(2vmin + env(safe-area-inset-left))}
+#board{flex:1;position:relative;background:#2f5a3a;border:1.4vmin solid #8b5a2b;border-radius:.6vmin;overflow:hidden;box-shadow:inset 0 0 8vmin rgba(0,0,0,.35);transition:border-color .3s}
+#board::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 20% 30%,rgba(255,255,255,.05),transparent 45%),radial-gradient(ellipse at 75% 70%,rgba(255,255,255,.04),transparent 50%);pointer-events:none}
+#board.myturn{border-color:#e8b34a}
+#tray{height:calc(6vmin + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#8b5a2b;border-top:.7vmin solid #a56c36;display:flex;align-items:center;gap:2.2vmin;padding-left:28%}
+.chalk{width:7vmin;height:1.5vmin;border-radius:.75vmin;background:#f4f1e8}
+.chalk.y{background:#ffd166;width:5vmin}.chalk.p{background:#f4a6b8;width:4vmin}
+.eraser{width:13vmin;height:3.6vmin;background:#3b3b3b;border-radius:.5vmin;border-top:1.6vmin solid #c9a66b;margin-left:2vmin}
+
+.deco{position:absolute;font-size:3vmin;line-height:1.4}
+.deco h3{font-size:3.3vmin;font-weight:700;border-bottom:.3vmin dashed rgba(244,241,232,.5);margin-bottom:.5vmin;padding-bottom:.2vmin}
+.tl{left:3vmin;top:2.4vmin}.tr{right:3vmin;top:2.4vmin;text-align:right}.br{right:3vmin;bottom:2.4vmin;text-align:right}
+
+#topArea{position:absolute;top:2.4vmin;left:50%;transform:translateX(-50%);width:56%;text-align:center}
+#label{font-size:3vmin;color:#c8e6a0;min-height:3.6vmin}
+#words{display:flex;flex-wrap:wrap;justify-content:center;gap:.2vmin 2.4vmin;font-size:4vmin;margin-top:.4vmin;max-height:14vmin;overflow:hidden}
+#words span{animation:pop .3s}
+
+#center{position:absolute;left:50%;top:43%;transform:translate(-50%,-50%);width:62%;text-align:center}
+.screen{display:none}.screen.on{display:block}
+.big{font-size:9vmin;font-weight:700;line-height:1.1}
+.mid{font-size:5vmin;line-height:1.4}
+.small{font-size:3.4vmin;color:#c8e6a0;line-height:1.5}
+.btn{font-family:inherit;font-size:4.2vmin;font-weight:700;padding:1vmin 3.4vmin;background:#ffd166;color:#3a2716;border:none;border-radius:1vmin;cursor:pointer}
+.btn.ghost{background:transparent;color:#c8e6a0;font-size:3vmin;text-decoration:underline;padding:.5vmin}
+.chalkInput{font-family:inherit;font-size:5.2vmin;height:8.6vmin;background:rgba(0,0,0,.18);border:.45vmin solid #f4f1e8;border-radius:1vmin;color:#f4f1e8;text-align:center;outline:none;-webkit-user-select:text;user-select:text}
+.chalkInput:focus{border-color:#ffd166}
+.chalkInput[readonly]{border-style:dashed;opacity:.9}
+.row{display:flex;gap:1.6vmin;justify-content:center;align-items:center;margin-top:2vmin}
+.msg{font-size:3.4vmin;min-height:4.6vmin;color:#ffb4a8;margin-top:1.2vmin}
+
+#cho{font-size:23vmin;line-height:1;font-weight:700;letter-spacing:3vmin;padding-left:3vmin}
+#status{font-size:3.8vmin;color:#c8e6a0;margin-bottom:.6vmin;min-height:5vmin}
+#board.myturn #status{color:#ffd166;font-weight:700}
+#answer{width:36vmin}
+#timer{font-size:5.4vmin;color:#ffd166;min-width:10vmin;text-align:left}
+#timer.hurry{color:#ff8a80}
+#defeat{display:none;font-size:3.4vmin;background:rgba(0,0,0,.25);border:.3vmin dashed #ffb4a8;color:#ffb4a8;border-radius:1vmin;padding:.4vmin 2vmin;margin-top:1.2vmin}
+#defeat.on{display:inline-block}
+
+#lobbyNums{display:flex;flex-wrap:wrap;justify-content:center;gap:1.4vmin;margin:2vmin auto 1.6vmin;max-width:90%}
+.num{width:7vmin;height:7vmin;border:.35vmin solid #f4f1e8;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:3.8vmin;font-weight:700;animation:pop .3s}
+.num.me{background:#ffd166;color:#3a2716;border-color:#ffd166}
+#count{font-size:22vmin;font-weight:700;line-height:1;color:#ffd166}
+
+#tags{position:absolute;bottom:3vmin;left:50%;transform:translateX(-50%);display:flex;gap:3vmin;align-items:flex-end}
+.tagwrap{text-align:center}
+.tag{background:#f4f1e8;color:#2f5a3a;border-radius:.8vmin;padding:.8vmin 2.2vmin;font-size:3.6vmin;font-weight:700;transition:transform .3s,background .3s;transform-origin:bottom center;position:relative}
+.tag.me::after{content:"나";position:absolute;top:-1.6vmin;right:-1.6vmin;background:#f4a6b8;color:#3a2716;font-size:2.2vmin;border-radius:50%;width:3.4vmin;height:3.4vmin;display:flex;align-items:center;justify-content:center}
+.tag.now{transform:scale(1.5);background:#ffd166;color:#3a2716}
+.tag.out{background:#9a9890;color:#4a4a46;text-decoration:line-through}
+.loss{font-size:2.8vmin;height:3.6vmin;color:#ffb4a8;margin-top:.4vmin}
+
+#popup{position:absolute;inset:0;background:rgba(20,40,25,.72);display:none;align-items:center;justify-content:center}
+#popup.on{display:flex}
+.pcard{background:#f4f1e8;color:#2f3a2f;border-radius:2vmin;padding:3vmin 5vmin;max-width:70%;text-align:center;animation:pop .25s}
+.pwho{font-size:3.2vmin;color:#7a6a50}
+.pword{font-size:10vmin;font-weight:700;color:#2f5a3a;line-height:1.1}
+.pdef{font-size:4vmin;margin-top:1.4vmin;line-height:1.4}
+
+table.res{margin:1.6vmin auto 0;border-collapse:collapse;font-size:3.4vmin}
+table.res th,table.res td{padding:.5vmin 2.4vmin;border-bottom:.25vmin dashed rgba(244,241,232,.4)}
+table.res th{color:#c8e6a0;font-weight:400}
+tr.meRow td{color:#ffd166;font-weight:700}
+
+#rotate{display:none;position:fixed;inset:0;background:#2f5a3a;color:#f4f1e8;font-size:6vmin;align-items:center;justify-content:center;text-align:center;z-index:9;padding:5vmin}
+@media (orientation:portrait){#rotate{display:flex}}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="frame">
+  <div id="board">
+    <div class="deco tl"><h3>오늘의 시간표</h3>1 국어<br>2 수학<br>3 국어<br>4 수학<br>5 국어<br>6 수학</div>
+    <div class="deco tr"><h3>오늘의 급식</h3>밥<br>국<br>김치</div>
+    <div class="deco br"><h3>떠든 학생</h3>김XX, 박XX, 이XX</div>
+
+    <div id="topArea"><div id="label"></div><div id="words"></div></div>
+
+    <div id="center">
+      <div class="screen" id="scLogin">
+        <div class="big">한글날 초성 퀴즈</div>
+        <div class="small" style="margin-top:1vmin">내 번호를 쓰고 입장하세요</div>
+        <div class="row">
+          <input id="numInput" class="chalkInput" style="width:20vmin" type="number" inputmode="numeric" min="1" max="24" placeholder="번호">
+          <button class="btn" id="loginBtn">입장</button>
+        </div>
+        <div class="msg" id="loginMsg"></div>
+      </div>
+
+      <div class="screen" id="scLobby">
+        <div class="mid">입장한 친구들 <span id="lobbyCount"></span></div>
+        <div id="lobbyNums"></div>
+        <div class="small">선생님이 게임을 시작할 때까지 기다려주세요</div>
+        <button class="btn ghost" id="logoutBtn">번호 바꾸기</button>
+      </div>
+
+      <div class="screen" id="scAssign">
+        <div class="mid">랜덤하게 게임 방이 정해집니다.</div>
+        <div id="count"></div>
+        <div class="mid" id="assignRoom"></div>
+        <div class="small" id="assignMates"></div>
+      </div>
+
+      <div class="screen" id="scPlay">
+        <div id="status"></div>
+        <div id="cho"></div>
+        <div class="row">
+          <input id="answer" class="chalkInput" type="text" maxlength="10" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
+          <button class="btn" id="submitBtn">제출</button>
+          <div id="timer"></div>
+        </div>
+        <div class="msg" id="playMsg"></div>
+        <div id="defeat">패배했어요 · 친구들 게임을 구경해요</div>
+      </div>
+
+      <div class="screen" id="scWait"><div class="mid" id="waitText"></div></div>
+
+      <div class="screen" id="scResult">
+        <div class="big">게임 종료!</div>
+        <div class="small" id="endReason"></div>
+        <div class="mid" id="myResult" style="margin-top:1vmin"></div>
+        <table class="res" id="resTable"></table>
+      </div>
+    </div>
+
+    <div id="tags"></div>
+
+    <div id="popup"><div class="pcard">
+      <div class="pwho" id="pWho"></div>
+      <div class="pword" id="pWord"></div>
+      <div class="pdef" id="pDef"></div>
+    </div></div>
+  </div>
+  <div id="tray"><div class="chalk"></div><div class="chalk y"></div><div class="chalk p"></div><div class="eraser"></div></div>
+</div>
+<div id="rotate">태블릿을 가로로 돌려주세요</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const socket = io();
+let S = null;
+let me = parseInt(sessionStorage.getItem('chosungNum') || '', 10) || null;
+let token = localStorage.getItem('chosungToken');
+if (!token) { token = Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('chosungToken', token); }
+let myTurnPrev = false;
+const timer = { running: false, deadline: 0, frozen: 0 };
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function show(name) { document.querySelectorAll('.screen').forEach(el => el.classList.toggle('on', el.id === 'sc' + name)); }
+function wait(html) { $('waitText').innerHTML = html; show('Wait'); }
+
+// ---------- 로그인 ----------
+function login(num, silent) {
+  socket.emit('studentLogin', { num, token }, res => {
+    if (res && res.ok) {
+      me = res.num; sessionStorage.setItem('chosungNum', me); $('loginMsg').textContent = '';
+    } else {
+      me = null; sessionStorage.removeItem('chosungNum');
+      $('loginMsg').textContent = (res && res.msg) || '입장하지 못했어요. 다시 해보세요.';
+    }
+    render();
+  });
+}
+$('loginBtn').onclick = () => {
+  const n = parseInt($('numInput').value, 10);
+  if (!n) { $('loginMsg').textContent = '번호를 입력해주세요.'; return; }
+  login(n, false);
+};
+$('numInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('loginBtn').click(); });
+$('numInput').addEventListener('input', () => { $('loginMsg').textContent = ''; });
+$('logoutBtn').onclick = () => { socket.emit('studentLogout'); me = null; sessionStorage.removeItem('chosungNum'); render(); };
+
+socket.on('connect', () => { if (me) login(me, true); });
+socket.on('state', s => { S = s; render(); });
+socket.on('typing', ({ room, text }) => {
+  if (!S) return;
+  const r = S.rooms.find(x => x.id === room);
+  if (r) r.typing = text;
+  const st = me && S.stats[me];
+  if (st && st.room === room && r && r.current !== me) $('answer').value = text;
+});
+
+// ---------- 정답 입력 ----------
+function myRoom() { const st = S && me && S.stats[me]; return st ? S.rooms.find(r => r.id === st.room) : null; }
+function isMyTurn() { const r = myRoom(); return !!(r && S.phase === 'playing' && r.status === 'live' && r.current === me && !r.checking && !r.popup); }
+function submit() {
+  if (!isMyTurn()) return;
+  const w = $('answer').value.trim();
+  if (!w) { $('playMsg').textContent = '단어를 입력해주세요.'; return; }
+  socket.emit('submitWord', w, res => { if (res && !res.ok && res.msg) $('playMsg').textContent = res.msg; });
+}
+$('submitBtn').onclick = submit;
+$('answer').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); submit(); } });
+$('answer').addEventListener('input', () => { if (isMyTurn()) { socket.emit('typing', $('answer').value); $('playMsg').textContent = ''; } });
+
+// ---------- 화면 그리기 ----------
+function render() {
+  const board = $('board');
+  board.classList.remove('myturn');
+  $('popup').classList.remove('on');
+  if (!me) { show('Login'); clearTop(); myTurnPrev = false; return; }
+  if (!S) return;
+  const st = S.stats[me];
+  if (S.phase === 'lobby') { renderLobby(); clearTop(); myTurnPrev = false; return; }
+  if (!st) { wait('게임이 진행 중이에요.<br><span class="small">다음 게임을 기다려주세요</span>'); clearTop(); myTurnPrev = false; return; }
+  const room = S.rooms.find(r => r.id === st.room);
+
+  if (S.phase === 'assigning') {
+    show('Assign'); clearTop();
+    $('count').textContent = S.countdown;
+    $('assignRoom').textContent = `나는 ${room.id}번 방!`;
+    $('assignMates').textContent = '같은 방 친구: ' + room.members.map(n => n + '번').join(', ');
+    myTurnPrev = false; return;
+  }
+  if (S.phase === 'gameOver') { renderResult(room, st); clearTop(); myTurnPrev = false; return; }
+
+  $('label').textContent = `${room.id}번 방 · ${S.round}라운드`;
+  $('words').innerHTML = room.words.map(w => `<span>${esc(w.word)}</span>`).join('');
+  renderTags(room);
+
+  if (room.status === 'live') {
+    show('Play'); renderPlay(room, st);
+  } else {
+    myTurnPrev = false;
+    const lostMe = room.lastLoser === me;
+    let note = room.lastLoser != null ? `${room.lastLoser}번 친구가 라운드 탈락했어요` : `모두 ${S.laps}바퀴 성공!`;
+    if (lostMe) note = st.defeated ? '라운드 탈락! 탈락 2번으로 패배했어요' : '앗, 이번 라운드 탈락! (1번 남았어요)';
+    if (room.status === 'finished') {
+      const alive = room.members.filter(n => !S.stats[n].defeated);
+      wait(`우리 방 게임이 끝났어요!<br><span class="small">${esc(note)}<br>살아남은 친구: ${alive.map(n => n + '번').join(', ') || '없음'}<br>결과 발표를 기다려주세요</span>`);
+    } else if (S.phase === 'roundEnd') {
+      wait(`${S.round}라운드 종료!<br><span class="small">${esc(note)}<br>선생님이 다음 라운드를 시작할 때까지 기다려주세요</span>`);
+    } else {
+      wait(`아직 라운드가 종료되지 않았습니다.<br>다른 친구들을 기다려주세요<br><span class="small">${esc(note)}</span>`);
+    }
+  }
+}
+function clearTop() { $('label').textContent = ''; $('words').innerHTML = ''; $('tags').innerHTML = ''; }
+
+function renderLobby() {
+  show('Lobby');
+  $('lobbyCount').textContent = `(${S.online.length}명)`;
+  $('lobbyNums').innerHTML = S.online.map(n => `<div class="num ${n === me ? 'me' : ''}">${n}</div>`).join('');
+}
+
+function renderTags(room) {
+  const list = room.order.length ? room.order.concat(room.members.filter(n => !room.order.includes(n))) : room.members;
+  $('tags').innerHTML = list.map(n => {
+    const s = S.stats[n];
+    const cls = [s.defeated ? 'out' : '', room.current === n ? 'now' : '', n === me ? 'me' : ''].join(' ');
+    return `<div class="tagwrap"><div class="tag ${cls}">${n}번</div><div class="loss">${s.defeated ? '패배' : '✕'.repeat(s.losses)}</div></div>`;
+  }).join('');
+}
+
+function renderPlay(room, st) {
+  const myTurn = room.current === me;
+  const ans = $('answer');
+  $('cho').textContent = S.chosung;
+  $('defeat').classList.toggle('on', !!st.defeated);
+  if (myTurn) $('board').classList.add('myturn');
+
+  let status;
+  if (room.popup) status = `${room.popup.num}번 정답!`;
+  else if (room.checking) status = myTurn ? '사전에서 찾는 중…' : `${room.current}번 친구 답을 사전에서 찾는 중…`;
+  else if (myTurn) status = '내 차례! 입력칸을 눌러 단어를 써주세요';
+  else status = `${room.current}번 차례`;
+  $('status').textContent = status;
+
+  const canType = myTurn && !room.checking && !room.popup;
+  ans.readOnly = !canType;
+  $('submitBtn').style.visibility = canType ? 'visible' : 'hidden';
+  if (myTurn && !myTurnPrev) { ans.value = ''; $('playMsg').textContent = ''; setTimeout(() => ans.focus(), 50); }
+  if (!myTurn) { ans.value = room.typing || ''; $('playMsg').textContent = ''; if (document.activeElement === ans) ans.blur(); }
+  myTurnPrev = myTurn;
+
+  if (room.current != null && !room.checking && !room.popup) { timer.running = true; timer.deadline = Date.now() + room.remaining; }
+  else { timer.running = false; timer.frozen = room.remaining; }
+
+  if (room.popup) {
+    $('pWho').textContent = `${room.popup.num}번 정답!`;
+    $('pWord').textContent = room.popup.word;
+    $('pDef').textContent = room.popup.def || '';
+    $('popup').classList.add('on');
+  }
+}
+
+function renderResult(room, st) {
+  show('Result');
+  $('endReason').textContent = S.endReason || '';
+  $('myResult').textContent = st.defeated ? `아쉽게 패배! 맞힌 단어 ${st.correct}개` : `생존 성공! 맞힌 단어 ${st.correct}개`;
+  const rows = room.members.map(n => {
+    const s = S.stats[n];
+    return `<tr class="${n === me ? 'meRow' : ''}"><td>${n}번</td><td>${s.defeated ? '패배' : '생존'}</td><td>${s.losses}</td><td>${s.correct}</td></tr>`;
+  }).join('');
+  $('resTable').innerHTML = `<tr><th>번호</th><th>결과</th><th>라운드 탈락</th><th>맞힌 단어</th></tr>${rows}`;
+}
+
+setInterval(() => {
+  const ms = timer.running ? Math.max(0, timer.deadline - Date.now()) : timer.frozen;
+  $('timer').textContent = Math.ceil(ms / 1000) + '초';
+  $('timer').classList.toggle('hurry', ms <= 3000);
+}, 100);
+
+render();
+</script>
+</body>
+</html>
