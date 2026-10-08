@@ -117,11 +117,11 @@ tr.meRow td{color:#ffd166;font-weight:700}
       <div class="screen" id="scPlay">
         <div id="status"></div>
         <div id="cho"></div>
-        <div class="row">
-          <input id="answer" class="chalkInput" type="text" maxlength="10" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="done">
-          <button class="btn" id="submitBtn">제출</button>
+        <form class="row" id="answerForm" autocomplete="off" novalidate>
+          <input id="answer" class="chalkInput" type="text" maxlength="10" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="send">
+          <button class="btn" id="submitBtn" type="submit">제출</button>
           <div id="timer"></div>
-        </div>
+        </form>
         <div class="msg" id="playMsg"></div>
         <div id="defeat">패배했어요 · 친구들 게임을 구경해요</div>
       </div>
@@ -197,15 +197,43 @@ socket.on('typing', ({ room, text }) => {
 // ---------- 정답 입력 ----------
 function myRoom() { const st = S && me && S.stats[me]; return st ? S.rooms.find(r => r.id === st.room) : null; }
 function isMyTurn() { const r = myRoom(); return !!(r && S.phase === 'playing' && r.status === 'live' && r.current === me && !r.checking && !r.popup); }
-function submit() {
-  if (!isMyTurn()) return;
-  const w = $('answer').value.trim();
-  if (!w) { $('playMsg').textContent = '단어를 입력해주세요.'; return; }
-  socket.emit('submitWord', w, res => { if (res && !res.ok && res.msg) $('playMsg').textContent = res.msg; });
+// 한글 조합 중에 엔터/제출을 눌러도 글자가 완성된 뒤 제출되도록 처리
+let composing = false, pendingSubmit = false, lastSubmit = 0;
+const ansEl = $('answer');
+ansEl.addEventListener('compositionstart', () => { composing = true; });
+ansEl.addEventListener('compositionend', () => {
+  composing = false;
+  if (pendingSubmit) { pendingSubmit = false; setTimeout(submit, 0); }
+});
+function requestSubmit() {
+  if (composing) {
+    pendingSubmit = true;
+    ansEl.blur(); // 조합 중인 글자를 강제로 완성
+    setTimeout(() => { if (pendingSubmit) { pendingSubmit = false; submit(); } }, 200);
+  } else submit();
 }
-$('submitBtn').onclick = submit;
-$('answer').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); submit(); } });
-$('answer').addEventListener('input', () => { if (isMyTurn()) { socket.emit('typing', $('answer').value); $('playMsg').textContent = ''; } });
+function submit() {
+  const r = myRoom();
+  if (!r || S.phase !== 'playing' || r.status !== 'live' || r.current !== me) return;
+  if (r.checking || r.popup) return;
+  if (Date.now() - lastSubmit < 500) return; // 두 번 눌림 방지
+  const w = ansEl.value.replace(/\s/g, '');
+  if (!w) { $('playMsg').textContent = '단어를 입력해주세요.'; ansEl.focus(); return; }
+  lastSubmit = Date.now();
+  $('playMsg').textContent = '';
+  socket.timeout(15000).emit('submitWord', w, (err, res) => {
+    if (err) { $('playMsg').textContent = '연결이 불안정해요. 다시 제출해 주세요.'; return; }
+    if (res && !res.ok && res.msg) { $('playMsg').textContent = res.msg; setTimeout(() => ansEl.focus(), 50); }
+  });
+}
+// 키보드 엔터/완료 키와 제출 버튼 모두 여기로 들어옴
+$('answerForm').addEventListener('submit', e => { e.preventDefault(); requestSubmit(); });
+ansEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.isComposing || composing)) { e.preventDefault(); pendingSubmit = true; }
+});
+// 제출 버튼을 눌러도 입력칸 포커스가 풀리지 않게 (아이패드에서 첫 터치가 씹히는 문제 방지)
+$('submitBtn').addEventListener('pointerdown', e => { if (!composing) e.preventDefault(); });
+ansEl.addEventListener('input', () => { if (isMyTurn()) { socket.emit('typing', ansEl.value); $('playMsg').textContent = ''; } });
 
 // ---------- 화면 그리기 ----------
 function render() {
