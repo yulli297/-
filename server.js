@@ -11,8 +11,8 @@ const server = http.createServer(app);
 const io = new Server(server, { pingInterval: 5000, pingTimeout: 6000 });
 
 const PORT = process.env.PORT || 3000;
-const OPENDICT_KEY = (process.env.OPENDICT_KEY || '').trim(); // 우리말샘 키
-const STDICT_KEY = (process.env.STDICT_KEY || '').trim();     // 표준국어대사전 키
+const STDICT_KEY = (process.env.STDICT_KEY || '').trim();     // 표준국어대사전 키 (메인)
+const OPENDICT_KEY = (process.env.OPENDICT_KEY || '').trim(); // 우리말샘 키 (비상용)
 
 // ===== 게임 설정 (여기 숫자만 바꾸면 규칙이 바뀌어요) =====
 const CONFIG = {
@@ -71,9 +71,10 @@ async function fetchWithTimeout(url) {
   finally { clearTimeout(t); }
 }
 function dictList() {
+  // 표준국어대사전이 메인(판정+뜻), 우리말샘은 표준이 먹통일 때만 사용
   const list = [];
-  if (OPENDICT_KEY) list.push({ name: '우리말샘', base: 'https://opendict.korean.go.kr/api/search', key: OPENDICT_KEY });
   if (STDICT_KEY) list.push({ name: '표준국어대사전', base: 'https://stdict.korean.go.kr/api/search.do', key: STDICT_KEY });
+  if (OPENDICT_KEY) list.push({ name: '우리말샘', base: 'https://opendict.korean.go.kr/api/search', key: OPENDICT_KEY });
   return list;
 }
 // 결과: {status:'ok', def} 또는 {status:'notfound'}. 연결 문제면 에러를 던짐
@@ -96,7 +97,8 @@ async function queryDict(base, key, word) {
   }
   return { status: 'notfound' };
 }
-// 우리말샘 → (먹통이면) 표준국어대사전 → 둘 다 먹통이면 down
+// 표준국어대사전 → (먹통일 때만) 우리말샘 → 둘 다 먹통이면 down
+// 표준이 정상 응답했는데 단어가 없으면 그대로 '없는 단어' 처리 (우리말샘으로 넘어가지 않음)
 async function checkWord(word) {
   for (const d of dictList()) {
     try { return await queryDict(d.base, d.key, word); }
@@ -419,8 +421,8 @@ io.on('connection', (socket) => {
   socket.on('testDict', async (cb) => {
     cb = typeof cb === 'function' ? cb : () => {};
     const out = [];
-    if (!OPENDICT_KEY) out.push('우리말샘: 키가 설정되지 않았어요 (OPENDICT_KEY)');
-    if (!STDICT_KEY) out.push('표준국어대사전: 키가 설정되지 않았어요 (STDICT_KEY)');
+    if (!STDICT_KEY) out.push('표준국어대사전(메인): 키가 설정되지 않았어요 (STDICT_KEY)');
+    if (!OPENDICT_KEY) out.push('우리말샘(비상용): 키가 설정되지 않았어요 (OPENDICT_KEY)');
     for (const d of dictList()) {
       try {
         const r = await queryDict(d.base, d.key, '학교');
