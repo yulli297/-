@@ -79,6 +79,7 @@ td.live{color:#9fd1a8;font-weight:700}td.dead{color:#f09595}
   <span id="nextInfo" style="color:#8a948a;font-size:14px"></span>
   <button class="primary hide" id="nextBtn">다음 라운드 시작</button>
   <button class="danger hide" id="endBtn">게임 끝내기</button>
+  <button class="danger hide" id="initBtn">게임 초기화</button>
   <button class="hide" id="resetBtn">새 게임 준비</button>
 </header>
 
@@ -177,6 +178,7 @@ $('testBtn').onclick = () => {
 };
 $('nextBtn').onclick = () => socket.emit('nextRound');
 $('endBtn').onclick = () => { if (confirm('지금 게임을 끝내고 결과를 볼까요?')) socket.emit('forceEnd'); };
+$('initBtn').onclick = () => { if (confirm('정말 초기화할까요?\n지금 게임 기록은 모두 사라지고, 학생들은 대기실로 돌아가요.\n(학생 접속과 초성은 그대로 유지돼요)')) socket.emit('resetGame'); };
 $('resetBtn').onclick = () => { if (S.phase === 'gameOver' || confirm('새 게임을 준비할까요? 지금 기록은 사라져요.')) socket.emit('resetGame'); };
 
 // ---------- 화면 그리기 ----------
@@ -186,6 +188,7 @@ function render() {
   $('nextBtn').classList.toggle('hide', p !== 'roundEnd');
   $('endBtn').classList.toggle('hide', !(p === 'assigning' || p === 'playing' || p === 'roundEnd'));
   $('resetBtn').classList.toggle('hide', p !== 'gameOver');
+  $('initBtn').classList.toggle('hide', !(p === 'assigning' || p === 'playing' || p === 'roundEnd'));
   $('curCho').textContent = S.chosung || '';
   $('nextInfo').textContent = (p === 'roundEnd' && INFO) ? `다음 초성: ${INFO.chosungList[S.round] || ''}` : '';
 
