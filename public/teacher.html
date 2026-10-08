@@ -158,7 +158,7 @@ function buildInputs() {
   box.querySelectorAll('input').forEach((inp, i) => { if (document.activeElement !== inp) inp.value = INFO.chosungList[i] || ''; });
   const k = INFO.keys;
   $('dictOut').textContent = (!k.opendict || !k.stdict)
-    ? `사전 키 확인: 우리말샘 ${k.opendict ? '설정됨' : '없음'}, 표준국어대사전 ${k.stdict ? '설정됨' : '없음'}` : '';
+    ? `사전 키 확인: 표준국어대사전(메인) ${k.stdict ? '설정됨' : '없음'}, 우리말샘(비상용) ${k.opendict ? '설정됨' : '없음'}` : '';
 }
 function getCho() { return [...$('choInputs').querySelectorAll('input')].map(i => norm(i.value)); }
 function saveCho() { socket.emit('saveChosung', getCho()); }
