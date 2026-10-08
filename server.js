@@ -101,7 +101,7 @@ async function queryDict(base, key, word) {
 // 표준이 정상 응답했는데 단어가 없으면 그대로 '없는 단어' 처리 (우리말샘으로 넘어가지 않음)
 async function checkWord(word) {
   for (const d of dictList()) {
-    try { return await queryDict(d.base, d.key, word); }
+    try { const r = await queryDict(d.base, d.key, word); r.source = d.name; return r; }
     catch (e) { console.log(`[사전] ${d.name} 연결 실패:`, e.message); }
   }
   return { status: 'down' };
@@ -212,6 +212,7 @@ function runTimer(room) {
   const gid = game.id;
   room._turnTimer = setTimeout(() => {
     if (game.id !== gid || room.status !== 'live' || room.checking || room.popup) return;
+    console.log(`[시간초과] ${room.id}번 방 ${room.lap}바퀴 ${room.current}번 라운드 탈락`);
     endRoomRound(room, room.current); // 시간 초과 = 라운드 탈락
     broadcast();
   }, room.remaining);
@@ -304,18 +305,24 @@ io.on('connection', (socket) => {
     cb = typeof cb === 'function' ? cb : () => {};
     const num = socket.data.num;
     const room = roomOf(num);
+    const word = String(raw || '').replace(/\s/g, '');
     if (!room || game.phase !== 'playing' || room.status !== 'live' || room.current !== num || room.checking || room.popup) {
+      const why = !room ? '방 없음' : room.current !== num ? `차례 아님(현재 ${room.current}번)` : room.checking ? '확인 중' : room.popup ? '팝업 중' : `상태 ${room.status}`;
+      console.log(`[제출 무시] ${num}번 "${word}" → ${why}`);
       return cb({ ok: false, msg: '' });
     }
-    const word = String(raw || '').replace(/\s/g, '');
+    const tag = `[제출] ${room.id}번 방 ${room.lap}바퀴 ${num}번 "${word}"`;
     const err = localCheck(word, game.chosung);
-    if (err) return cb({ ok: false, msg: err });
-    if (room.used.includes(word)) return cb({ ok: false, msg: '이미 제출된 정답입니다.' });
+    if (err) { console.log(`${tag} → ${err}`); return cb({ ok: false, msg: err }); }
+    if (room.used.includes(word)) { console.log(`${tag} → 이미 제출된 단어`); return cb({ ok: false, msg: '이미 제출된 정답입니다.' }); }
 
     pauseTimer(room); // 사전 확인하는 동안 시간 멈춤
     broadcast();
     const gid = game.id, round = game.round;
+    const t0 = Date.now();
     const r = await checkWord(word);
+    const sec = ((Date.now() - t0) / 1000).toFixed(1);
+    console.log(`${tag} → ${r.status === 'ok' ? '정답' : r.status === 'notfound' ? '사전에 없음' : '사전 먹통'} (${r.source || '-'}, ${sec}초)`);
     if (game.id !== gid || game.round !== round || room.status !== 'live' || room.current !== num) return;
 
     if (r.status === 'down') {
